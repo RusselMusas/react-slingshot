@@ -1,0 +1,63 @@
+# CircleCI Version 2.1
+version: 2.1
+
+# Aliases
+defaults: &defaultsDockerImage
+  docker:
+    - image: circleci/node:13.8.0
+
+# Define a jobs
+jobs:
+
+  build:
+    # Using Docker Image Anchor
+    <<: *defaultsDockerImage
+
+    steps:
+      - checkout
+      - run: npm i
+      - save_cache:
+          key: "npm_packages"
+          paths:
+            - /src/node_modules
+      - run: npm run lint
+
+  test:
+    # Using Docker Image Anchor
+    <<: *defaultsDockerImage
+
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - "npm_packages"
+      - run: npm i
+      - run: npm run test
+      
+  analyze:
+    # Using Docker Image Anchor
+    <<: *defaultsDockerImage
+
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - "npm_packages"
+      - run: npm audit
+      - run:
+          name: "On Audit error - Try Fix"
+          command: npm audit fix
+          when: on_fail
+
+
+# Workflows
+workflows:
+  ci-workflow:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - analyze:
+          requires:
+            - test
